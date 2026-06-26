@@ -146,7 +146,13 @@ bunx wrangler d1 create edgeever
 bunx wrangler r2 bucket create edgeever-resources
 ```
 
-把 D1 创建命令返回的 `database_id` 填入本机 `.env.local` 的 `EDGE_EVER_D1_DATABASE_ID`，并同步替换 `wrangler.toml` 里的 `database_id` 占位值。
+把 D1 创建命令返回的 `database_id` 填入本机 `.env.local` 的 `EDGE_EVER_D1_DATABASE_ID`。部署脚本会在运行时生成临时 `.wrangler.generated.toml`，不需要把个人 D1 ID 提交到公开仓库。
+
+如果你把 Worker 连接到 GitHub 并开启 Cloudflare 自动构建，需要在 Cloudflare 的 Build Variables 里设置：
+
+```text
+EDGE_EVER_D1_DATABASE_ID=<你的 D1 database_id>
+```
 
 应用本地迁移：
 
