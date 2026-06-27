@@ -39,6 +39,7 @@ import {
   TagX,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { GitHubRepositoryLink } from "@/components/GitHubRepositoryLink";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -593,6 +594,7 @@ const MobileHomeHeader = ({
       >
         <RefreshCw className={cn("h-4 w-4", isSyncingQueuedChanges && "animate-spin")} />
       </button>
+      <GitHubRepositoryLink className="flex h-9 w-9 justify-center rounded-full text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70" />
     </div>
   </div>
 );

@@ -26,6 +26,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { NotebookTreeItem } from "./NotebookTreeItem";
+import { GitHubRepositoryLink } from "./GitHubRepositoryLink";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import type { Notebook, AuthUser } from "@edgeever/shared";
@@ -391,6 +392,9 @@ export const NotebookPane = ({
             </div>
             <Settings className="h-4 w-4 shrink-0 text-slate-400" />
           </button>
+          <div className="mt-2 flex items-center justify-start">
+            <GitHubRepositoryLink className="h-8 w-8 justify-center rounded-md text-slate-500 transition hover:bg-slate-50 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70" />
+          </div>
         </div>
       </footer>
     </div>

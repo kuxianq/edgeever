@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { LockKeyhole } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { GitHubRepositoryLink } from "@/components/GitHubRepositoryLink";
 
 interface LoginScreenProps {
   error: string | null;
@@ -26,6 +27,7 @@ export const LoginScreen = ({ error, isSubmitting, onSubmit }: LoginScreenProps)
     <main className="flex h-[100dvh] items-center justify-center bg-gradient-to-tr from-emerald-50/70 via-[#f6faf7] to-[#ebf3ee] px-4 py-8 text-slate-950">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(98,127,88,0.06),transparent_45%)] pointer-events-none" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(98,127,88,0.04),transparent_55%)] pointer-events-none" />
+      <GitHubRepositoryLink className="absolute right-4 top-[max(1rem,env(safe-area-inset-top))] z-10 h-10 w-10 justify-center rounded-full border border-slate-200 bg-white/85 text-slate-600 shadow-sm backdrop-blur transition hover:bg-white hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#627f58]/70" iconClassName="h-5 w-5" />
       
       <section className="relative w-full max-w-[400px] rounded-2xl border border-[#627f58]/12 bg-white/95 p-8 shadow-[0_20px_50px_rgba(98,127,88,0.08)] backdrop-blur-md transition-all duration-300 hover:shadow-[0_24px_60px_rgba(98,127,88,0.12)]">
         <div className="mb-8 flex items-center gap-4">
