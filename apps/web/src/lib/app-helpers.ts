@@ -294,59 +294,6 @@ export const filterMemos = (memos: MemoSummary[], filterMode: MemoFilterMode) =>
   return memos;
 };
 
-export const getMemoMonthGroup = (date: Date) => {
-  if (Number.isNaN(date.getTime())) {
-    return { key: "unknown", label: "未知时间" };
-  }
-
-  return {
-    key: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`,
-    label: new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "long" }).format(date),
-  };
-};
-
-export const groupMemosByDate = (memos: MemoSummary[], sortMode: MemoSortMode) => {
-  const groups: Array<{ key: string; label: string; items: MemoSummary[] }> = [];
-
-  for (const memo of memos) {
-    const date = new Date(sortMode === "created-desc" ? memo.createdAt : memo.updatedAt);
-    const { key, label } = getMemoMonthGroup(date);
-    const current = groups[groups.length - 1];
-
-    if (current?.key === key) {
-      current.items.push(memo);
-      continue;
-    }
-
-    groups.push({ key, label, items: [memo] });
-  }
-
-  return groups;
-};
-
-export const groupMemosByTitle = (memos: MemoSummary[]) => {
-  const groups: Array<{ key: string; label: string; items: MemoSummary[] }> = [];
-
-  for (const memo of memos) {
-    const title = getMemoTitle(memo.title);
-    const firstChar = title.trim().charAt(0).toLocaleUpperCase("zh-CN");
-    const label = firstChar || "#";
-    const current = groups[groups.length - 1];
-
-    if (current?.key === label) {
-      current.items.push(memo);
-      continue;
-    }
-
-    groups.push({ key: label, label, items: [memo] });
-  }
-
-  return groups;
-};
-
-export const groupMemos = (memos: MemoSummary[], sortMode: MemoSortMode) =>
-  sortMode === "title-asc" ? groupMemosByTitle(memos) : groupMemosByDate(memos, sortMode);
-
 export type NotebookMoveOption = { id: string; name: string; selectLabel: string; slug: string | null; depth: number };
 
 export const getNotebookMoveOptions = (notebooks: Notebook[]) => {

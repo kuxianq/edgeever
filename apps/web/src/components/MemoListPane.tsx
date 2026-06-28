@@ -65,7 +65,6 @@ import {
   MEMO_SORT_OPTIONS,
   filterMemos,
   sortMemos,
-  groupMemos,
   getNotebookMoveOptions,
   readMemoListDensityPreference,
   writeMemoListDensityPreference,
@@ -343,7 +342,6 @@ export const MemoListPane = ({
   const filteredMemos = useMemo(() => filterMemos(memos, filterMode), [filterMode, memos]);
   const sortedMemos = useMemo(() => sortMemos(filteredMemos, sortMode, view !== "trash"), [filteredMemos, sortMode, view]);
   const visibleMemoIds = useMemo(() => sortedMemos.map((memo) => memo.id), [sortedMemos]);
-  const memoGroups = useMemo(() => groupMemos(sortedMemos, sortMode), [sortedMemos, sortMode]);
   const moveNotebookOptions = useMemo(() => getNotebookMoveOptions(notebooks), [notebooks]);
   const selectedMemosInList = useMemo(() => memos.filter((memo) => selectedMemoIds.has(memo.id)), [memos, selectedMemoIds]);
 
@@ -877,11 +875,14 @@ export const MemoListPane = ({
           </div>
         )}
 
-        <div className="mb-3 hidden min-w-0 lg:block">
-          <div className="truncate text-lg font-semibold leading-6 text-slate-950">{listTitle}</div>
-          <div className="mt-0.5 truncate text-xs text-slate-500">
-            {listContextLabel} · {listCountLabel}
+        <div className="mb-3 hidden min-w-0 items-start justify-between gap-3 lg:flex">
+          <div className="min-w-0">
+            <div className="truncate text-lg font-semibold leading-6 text-slate-950">{listTitle}</div>
+            <div className="mt-0.5 truncate text-xs text-slate-500">
+              {listContextLabel} · {listCountLabel}
+            </div>
           </div>
+          <GitHubRepositoryLink className="flex h-8 w-8 shrink-0 justify-center rounded-md border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70" />
         </div>
 
         <div className="mb-3 hidden items-center justify-between gap-2 lg:flex">
@@ -1216,37 +1217,29 @@ export const MemoListPane = ({
           </div>
         ) : (
           <div className="space-y-4 lg:space-y-0 lg:overflow-hidden lg:rounded-sm lg:border-y lg:border-slate-200 lg:bg-white">
-            {memoGroups.map((group) => (
-              <section key={group.key}>
-                <div className="sticky top-0 z-[4] flex h-7 items-center justify-between bg-emerald-50/90 px-1 text-xs font-medium text-slate-300 backdrop-blur lg:h-9 lg:border-b lg:border-slate-200 lg:bg-white/95 lg:px-4 lg:text-sm lg:font-semibold lg:text-slate-500">
-                  <span>{group.label}</span>
-                  <span className="text-[11px] font-medium text-slate-300 lg:text-sm lg:font-semibold lg:text-slate-500">{group.items.length}</span>
-                </div>
-                <div className="space-y-3 lg:space-y-0">
-                  {group.items.map((memo) => (
-                    <MemoCard
-                      key={memo.id}
-                      memo={memo}
-                      selected={memo.id === selectedMemoId}
-                      checked={selectedMemoIds.has(memo.id)}
-                      dragMemoIds={selectedMemoIds.has(memo.id) ? Array.from(selectedMemoIds) : [memo.id]}
-                      isTrashView={view === "trash"}
-                      selectionMode={selectionMode}
-                      listDensity={listDensity}
-                      multiSelectKeyDown={multiSelectKeyDown}
-                      onOpen={() => onOpenMemo(memo.id)}
-                      onDelete={() => onDeleteMemo(memo.id)}
-                      onRestore={() => onRestoreMemo(memo.id)}
-                      onOpenContextMenu={(event) => handleOpenMemoContextMenu(memo, event)}
-                      onOpenSelectionContextMenu={(event) => handleOpenSelectionContextMenu(memo, event)}
-                      onOpenSelectionKeyboardContextMenu={(target) => handleOpenSelectionKeyboardContextMenu(memo, target)}
-                      onOpenKeyboardContextMenu={(target) => handleOpenMemoKeyboardContextMenu(memo, target)}
-                      onToggle={(event) => handleToggleMemo(memo.id, event)}
-                    />
-                  ))}
-                </div>
-              </section>
-            ))}
+            <div className="space-y-3 lg:space-y-0">
+              {sortedMemos.map((memo) => (
+                <MemoCard
+                  key={memo.id}
+                  memo={memo}
+                  selected={memo.id === selectedMemoId}
+                  checked={selectedMemoIds.has(memo.id)}
+                  dragMemoIds={selectedMemoIds.has(memo.id) ? Array.from(selectedMemoIds) : [memo.id]}
+                  isTrashView={view === "trash"}
+                  selectionMode={selectionMode}
+                  listDensity={listDensity}
+                  multiSelectKeyDown={multiSelectKeyDown}
+                  onOpen={() => onOpenMemo(memo.id)}
+                  onDelete={() => onDeleteMemo(memo.id)}
+                  onRestore={() => onRestoreMemo(memo.id)}
+                  onOpenContextMenu={(event) => handleOpenMemoContextMenu(memo, event)}
+                  onOpenSelectionContextMenu={(event) => handleOpenSelectionContextMenu(memo, event)}
+                  onOpenSelectionKeyboardContextMenu={(target) => handleOpenSelectionKeyboardContextMenu(memo, target)}
+                  onOpenKeyboardContextMenu={(target) => handleOpenMemoKeyboardContextMenu(memo, target)}
+                  onToggle={(event) => handleToggleMemo(memo.id, event)}
+                />
+              ))}
+            </div>
           </div>
         )}
       </div>
