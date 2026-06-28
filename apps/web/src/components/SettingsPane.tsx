@@ -323,14 +323,7 @@ const SessionCard = ({ authRequired, isLoggingOut, onLogout }: SessionCardProps)
 
   return (
     <Card className="border-rose-100 bg-rose-50/30 shadow-none lg:col-span-2">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-sm text-rose-950">
-          <LogOut className="h-4 w-4 text-rose-700" />
-          会话管理
-        </CardTitle>
-        <CardDescription>退出登录会清理这台设备上的本地 session 状态。</CardDescription>
-      </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         <Button
           size="md"
           variant="danger"

@@ -393,16 +393,19 @@ export const NotebookPane = ({
         </nav>
       </div>
 
-      <footer className="border-t border-slate-200 bg-white/70 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-sm">
-        <div className="flex items-center">
+      <footer className="border-t border-slate-200 bg-white/80 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-sm">
+        <div>
           <button
             onClick={onOpenSettings}
-            className="flex h-9 w-9 items-center justify-center rounded-md text-slate-600 transition-colors duration-200 hover:bg-slate-50 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70"
+            className="flex h-9 w-full items-center gap-3 rounded-md px-3 text-left text-sm font-medium leading-none text-slate-700 transition-colors duration-200 hover:bg-slate-50 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70"
             type="button"
             title="个人中心"
             aria-label="个人中心"
           >
-            <CircleUserRound className="h-5 w-5" />
+            <span className="flex h-4 w-4 shrink-0 items-center justify-center">
+              <CircleUserRound className="h-4 w-4" />
+            </span>
+            <span className="min-w-0 flex-1 truncate">个人中心</span>
           </button>
         </div>
       </footer>
