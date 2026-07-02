@@ -91,17 +91,6 @@ bun run deploy
 
 同步 Fork 只会更新你 GitHub 仓库里的代码，不会自动更新已经部署到 Cloudflare 的实例。同步后必须重新执行部署命令，更新才会生效。
 
-## 公开 Demo 模式
-
-个人自托管实例默认不会自动清理数据。如果你要部署类似 `demo.edgeever.org` 的公开演示环境，可以在 `.env.local` 或 Cloudflare Build Variables 中开启 demo 模式：
-
-```sh
-EDGE_EVER_DEMO_MODE=true
-EDGE_EVER_DEMO_RESET_CRON='0 19 * * *'
-```
-
-开启后，服务端会自动补齐示例笔记，并在每天 UTC 19:00（北京时间 03:00）通过 Cloudflare Cron 重置 demo 数据：删除用户新增内容、附件资源、API token 和审计日志，再恢复固定示例笔记。
-
 ## 功能
 
 - 个人使用几乎可以零成本托管：基于 Cloudflare D1 + R2 免费额度，短笔记可达 10 万条量级，200KB 图片约可存放 5 万张。
@@ -118,6 +107,8 @@ EDGE_EVER_DEMO_RESET_CRON='0 19 * * *'
 - 单用户登录，密码使用 PBKDF2-SHA256 hash。
 
 ## PWA 安装说明
+
+PWA 可以把 EdgeEver 像普通应用一样安装到桌面或手机主屏幕，打开更方便，也能配合浏览器能力提供更接近原生 App 的使用体验。
 
 PC 端请使用 Chrome/Edge 打开站点，点击地址栏右侧的“安装”图标并确认。Android 建议用 Chrome 打开站点，点右上角三点菜单，选择“添加到主屏幕”，再点“安装”。Edge 可尝试菜单中的“添加到手机 / 添加到主屏幕 / 安装应用”，不同版本可能只创建快捷方式。请不要从微信等 App 内置浏览器安装。
 
@@ -203,3 +194,8 @@ Authorization: Bearer <api-token>
 图片压缩仅在 Web 端上传前执行，由设置页的“压缩笔记内图片”开关控制。启用后，浏览器会把 PNG、JPEG、WebP、AVIF 尝试压缩为 WebP，并将最长边限制在 `2560px` 以内；如果压缩结果不比原图小，则保留原图。
 
 Worker 端不会调用 Cloudflare Images，也不会在 REST API 或 MCP 上传时自动压缩图片；这些入口会按客户端提供的文件内容直接入库。
+
+## 社区与反馈
+
+- Bug、功能建议和部署问题请优先提交 [GitHub Issues](https://github.com/msh01/edgeever/issues)，方便后续用户检索和复用解决方案。
+- 微信：`m1245207870`（请备注 EdgeEver）
