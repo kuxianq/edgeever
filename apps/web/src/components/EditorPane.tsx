@@ -501,17 +501,7 @@ export const EditorPane = ({
     if (memo?.id && memo.id === mobileDefaultEditMemoId) {
       setIsMobileEditing(true);
       let frame = 0;
-      let consumeTimer = 0;
       let cancelled = false;
-      const targetMemoId = memo.id;
-      const consumeDefaultEditRequest = () => {
-        window.clearTimeout(consumeTimer);
-        consumeTimer = window.setTimeout(() => {
-          if (!cancelled && memoRef.current?.id === targetMemoId) {
-            onMobileDefaultEditConsumed();
-          }
-        }, 600);
-      };
 
       const focusWhenReady = (attempt = 0) => {
         frame = window.requestAnimationFrame(() => {
@@ -524,7 +514,6 @@ export const EditorPane = ({
             if (textarea) {
               textarea.focus({ preventScroll: true });
               textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-              consumeDefaultEditRequest();
               return;
             }
           }
@@ -532,7 +521,6 @@ export const EditorPane = ({
           const currentEditor = editorRef.current;
           if (!isMobileViewport && isEditorReady(currentEditor)) {
             currentEditor.commands.focus("end");
-            consumeDefaultEditRequest();
             return;
           }
 
@@ -548,7 +536,6 @@ export const EditorPane = ({
       return () => {
         cancelled = true;
         window.cancelAnimationFrame(frame);
-        window.clearTimeout(consumeTimer);
       };
     }
   }, [isMobileViewport, memo?.id, mobileDefaultEditMemoId, onMobileDefaultEditConsumed, readOnly]);
@@ -1415,15 +1402,20 @@ export const EditorPane = ({
 
   const handleMobileBack = () => {
     if (readOnly || !editor || !hasUnsavedChanges) {
+      onMobileDefaultEditConsumed();
       onBackToList();
       return;
     }
 
     saveMutation.mutate(undefined, {
-      onSuccess: () => onBackToList(),
+      onSuccess: () => {
+        onMobileDefaultEditConsumed();
+        onBackToList();
+      },
       onError: (error) => {
         const sourceError = error instanceof MemoSaveRequestError ? error.originalError : error;
         if (error instanceof MemoSaveRequestError && shouldQueueMemoSaveError(sourceError)) {
+          onMobileDefaultEditConsumed();
           onBackToList();
         }
       },
@@ -1432,6 +1424,7 @@ export const EditorPane = ({
 
   const handleMobileDone = () => {
     if (readOnly || !editor || !hasUnsavedChanges) {
+      onMobileDefaultEditConsumed();
       setIsMobileEditing(false);
       setMobileToolbarOpen(false);
       return;
@@ -1439,12 +1432,14 @@ export const EditorPane = ({
 
     saveMutation.mutate(undefined, {
       onSuccess: () => {
+        onMobileDefaultEditConsumed();
         setIsMobileEditing(false);
         setMobileToolbarOpen(false);
       },
       onError: (error) => {
         const sourceError = error instanceof MemoSaveRequestError ? error.originalError : error;
         if (error instanceof MemoSaveRequestError && shouldQueueMemoSaveError(sourceError)) {
+          onMobileDefaultEditConsumed();
           setIsMobileEditing(false);
           setMobileToolbarOpen(false);
         }
