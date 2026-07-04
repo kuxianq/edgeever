@@ -411,6 +411,7 @@ export const EditorPane = ({
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "queued" | "error" | "conflict">("idle");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [dirtyVersion, setDirtyVersion] = useState(0);
+  const [autoSaveVersion, setAutoSaveVersion] = useState(0);
   const [, setEditorStateVersion] = useState(0);
   const [imageUploadState, setImageUploadState] = useState<"idle" | "compressing" | "uploading" | "error">("idle");
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -440,11 +441,31 @@ export const EditorPane = ({
   const editingMemoIdRef = useRef<string | null>(memo?.id ?? null);
   const imageCompressionEnabledRef = useRef(imageCompressionEnabled);
   const draftPersistTimerRef = useRef<number | null>(null);
+  const autoSaveTimerRef = useRef<number | null>(null);
   const pendingBackAfterSaveRef = useRef(false);
   const toolbarRefreshFrameRef = useRef<number | null>(null);
+  const isComposingRef = useRef(false);
+  const lastAutoSaveVersionRef = useRef(0);
   const draftTitleRef = useRef("");
   const draftTagsTextRef = useRef("");
   const saveStateRef = useRef<"idle" | "saving" | "saved" | "queued" | "error" | "conflict">("idle");
+
+  const scheduleAutoSave = useCallback(() => {
+    if (autoSaveTimerRef.current !== null) {
+      window.clearTimeout(autoSaveTimerRef.current);
+    }
+
+    const delay = isMobileViewport ? 3000 : 1200;
+    autoSaveTimerRef.current = window.setTimeout(() => {
+      autoSaveTimerRef.current = null;
+
+      if (isComposingRef.current) {
+        return;
+      }
+
+      setAutoSaveVersion((version) => version + 1);
+    }, delay);
+  }, [isMobileViewport]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia(MOBILE_EDITOR_QUERY);
@@ -647,6 +668,21 @@ export const EditorPane = ({
         insertImageFiles(files);
         return true;
       },
+      handleDOMEvents: {
+        compositionstart: () => {
+          isComposingRef.current = true;
+          if (autoSaveTimerRef.current !== null) {
+            window.clearTimeout(autoSaveTimerRef.current);
+            autoSaveTimerRef.current = null;
+          }
+          return false;
+        },
+        compositionend: () => {
+          isComposingRef.current = false;
+          scheduleAutoSave();
+          return false;
+        },
+      },
     },
   });
 
@@ -792,11 +828,9 @@ export const EditorPane = ({
       });
     };
     editor.on("selectionUpdate", refreshToolbar);
-    editor.on("transaction", refreshToolbar);
 
     return () => {
       editor.off("selectionUpdate", refreshToolbar);
-      editor.off("transaction", refreshToolbar);
       if (toolbarRefreshFrameRef.current !== null) {
         window.cancelAnimationFrame(toolbarRefreshFrameRef.current);
         toolbarRefreshFrameRef.current = null;
@@ -977,19 +1011,26 @@ export const EditorPane = ({
       }
       persistCurrentDraft();
       markDirty();
+      if (!isComposingRef.current) {
+        scheduleAutoSave();
+      }
     };
 
     editor.on("update", persistDraft);
     return () => {
       editor.off("update", persistDraft);
     };
-  }, [editor, markDirty, memo, persistCurrentDraft]);
+  }, [editor, markDirty, memo, persistCurrentDraft, scheduleAutoSave]);
 
   useEffect(() => {
     return () => {
       if (draftPersistTimerRef.current !== null) {
         window.clearTimeout(draftPersistTimerRef.current);
         draftPersistTimerRef.current = null;
+      }
+      if (autoSaveTimerRef.current !== null) {
+        window.clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = null;
       }
     };
   }, []);
@@ -1061,6 +1102,7 @@ export const EditorPane = ({
       hasUnsavedChangesRef.current = true;
       setHasUnsavedChanges(true);
       setSaveState("idle");
+      scheduleAutoSave();
     },
     onError: async (error) => {
       const sourceError = error instanceof MemoSaveRequestError ? error.originalError : error;
@@ -1099,6 +1141,8 @@ export const EditorPane = ({
       !memo ||
       memo.isDeleted ||
       !editor ||
+      autoSaveVersion === 0 ||
+      autoSaveVersion === lastAutoSaveVersionRef.current ||
       !hasUnsavedChanges ||
       saveBlocked ||
       saveMutation.isPending ||
@@ -1107,12 +1151,15 @@ export const EditorPane = ({
       return;
     }
 
-    const timer = window.setTimeout(() => {
-      saveMutation.mutate();
-    }, 1200);
+    lastAutoSaveVersionRef.current = autoSaveVersion;
+    saveMutation.mutate();
+  }, [autoSaveVersion, editor, hasUnsavedChanges, memo, saveBlocked, saveMutation, saveState]);
 
-    return () => window.clearTimeout(timer);
-  }, [dirtyVersion, editor, hasUnsavedChanges, memo, saveBlocked, saveMutation, saveState]);
+  useEffect(() => {
+    if (!saveBlocked && hasUnsavedChangesRef.current && !isComposingRef.current) {
+      scheduleAutoSave();
+    }
+  }, [memo?.id, saveBlocked, scheduleAutoSave]);
 
   useEffect(() => {
     if (
@@ -1534,6 +1581,7 @@ export const EditorPane = ({
               setTitle(event.target.value);
               persistCurrentDraft(event.target.value, tagsText);
               markDirty();
+              scheduleAutoSave();
             }}
             className="block w-full rounded-md border-0 bg-transparent text-2xl font-bold leading-tight text-slate-950 outline-none transition placeholder:text-slate-300 focus-visible:bg-slate-50 focus-visible:shadow-[inset_3px_0_0_var(--brand-green)] sm:text-3xl"
             placeholder={t("common.untitledMemo")}
@@ -1577,6 +1625,7 @@ export const EditorPane = ({
                   setTagsText(event.target.value);
                   persistCurrentDraft(title, event.target.value);
                   markDirty();
+                  scheduleAutoSave();
                 }}
                 className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-slate-400"
                 placeholder={t("editor.tagPlaceholder")}

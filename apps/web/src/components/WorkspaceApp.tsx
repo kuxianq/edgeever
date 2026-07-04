@@ -2365,8 +2365,8 @@ export const WorkspaceApp = ({
                       cacheMemoDetail(queryClient, memo, memoView);
                       updateMemoSummaryInLists(queryClient, memo);
                       await Promise.all([
-                        queryClient.invalidateQueries({ queryKey: ["memos"] }),
-                        queryClient.invalidateQueries({ queryKey: ["notebooks"] }),
+                        queryClient.invalidateQueries({ queryKey: ["memos"], refetchType: "inactive" }),
+                        queryClient.invalidateQueries({ queryKey: ["notebooks"], refetchType: "inactive" }),
                       ]);
                     }}
                     onDeleted={async (memoId) => {
