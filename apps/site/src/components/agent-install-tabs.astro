@@ -15,6 +15,8 @@ const copy = isEnglish
       copying: "Copying...",
       copied: "Copied",
       copyFailed: "Copy failed",
+      billingNotice:
+        "Heads up: Cloudflare R2, D1, and Workers may ask you to add a Visa card even when you use the free quotas.",
       manualIntro:
         "Manual installation is best if you are comfortable with Cloudflare and the command line. Fork the repository first, then deploy from your own fork.",
       step1: "Step 1",
@@ -43,6 +45,8 @@ const copy = isEnglish
       copying: "复制中...",
       copied: "已复制",
       copyFailed: "复制失败",
+      billingNotice:
+        "提示：Cloudflare 的 R2、D1 和 Worker 即使使用免费额度，开通或使用时也可能要求绑定 Visa 卡。国内用户可考虑使用招商银行多币种卡绑定。",
       manualIntro: "手动安装适合熟悉 Cloudflare 与命令行的用户。先 Fork 仓库，再从你自己的 Fork 仓库部署。",
       step1: "第一步",
       step1Title: "Fork 官方仓库",
@@ -104,6 +108,11 @@ const copy = isEnglish
           <Icon class="h-5 w-5" name="bx:bx-copy" />
           <span data-copy-label>{copy.copyPrompt}</span>
         </button>
+      </div>
+
+      <div class="mx-auto mt-5 flex max-w-3xl gap-2 rounded-xl border border-amber-200/80 bg-amber-50/70 px-3 py-2 text-xs leading-5 text-amber-900">
+        <Icon class="mt-0.5 h-4 w-4 shrink-0 text-amber-600" name="bx:bx-credit-card" />
+        <p>{copy.billingNotice}</p>
       </div>
     </div>
 
