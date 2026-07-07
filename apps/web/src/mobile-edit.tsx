@@ -4,8 +4,14 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import Placeholder from "@tiptap/extension-placeholder";
-import { Bold, Check, ChevronDown, ImagePlus, List, Minus, Quote } from "lucide-react";
 import { docToMarkdown, emptyDoc, type MemoDetail, type Notebook, type TiptapDoc } from "@edgeever/shared";
+import {
+  MobileEditorFallback,
+  MobileEditorHeader,
+  MobileEditorNotebookButton,
+  MobileEditorNotebookSheet,
+  MobileEditorToolbar,
+} from "@/components/MobileStandaloneEditorParts";
 import { getNotebookMoveOptions } from "@/lib/app-helpers";
 import { compressImageForUpload } from "@/lib/image-compression";
 import {
@@ -15,6 +21,8 @@ import {
   MOBILE_EDITOR_LEAVE_SAVE_TIMEOUT_MS,
   getMobileEditorDraftKey,
   getMobileEditorParams,
+  getMobileEditorSaveLabel,
+  getMobileEditorStatusClassName,
   normalizeMobileEditorDoc,
   parseMobileEditorTags,
   requestMobileEditorJson,
@@ -532,33 +540,8 @@ const MobileTiptapEditorApp = () => {
     };
   }, [leavePage, persistLocalDraft, saveNow]);
 
-  const saveLabel =
-    saveState === "loading"
-      ? "加载中"
-      : saveState === "saving"
-        ? "保存中"
-        : saveState === "compressing"
-          ? "压缩中"
-          : saveState === "uploading"
-            ? "上传中"
-            : saveState === "dirty"
-              ? "未保存"
-              : saveState === "saved"
-                ? "已保存"
-                : saveState === "local-draft"
-                  ? "本地草稿"
-                  : saveState === "leaving"
-                    ? "返回中"
-                    : saveState === "error"
-                      ? "保存失败"
-                      : "已保存";
-
-  const statusClassName =
-    saveState === "error"
-      ? "error"
-      : saveState === "dirty" || saveState === "saving" || saveState === "compressing" || saveState === "uploading" || saveState === "leaving"
-        ? "active"
-        : "";
+  const saveLabel = getMobileEditorSaveLabel(saveState);
+  const statusClassName = getMobileEditorStatusClassName(saveState);
   const editorActionDisabled =
     !memo || !editor || saveState === "loading" || saveState === "compressing" || saveState === "uploading" || saveState === "leaving";
   const currentNotebookLabel =
@@ -577,17 +560,7 @@ const MobileTiptapEditorApp = () => {
 
   return (
     <div className="mobile-editor-shell">
-      <header className="mobile-editor-header">
-        <button className="mobile-editor-back" type="button" aria-label="返回" onClick={() => void leavePage()}>
-          ‹
-        </button>
-        <div className="mobile-editor-actions">
-          <span className={`mobile-editor-status ${statusClassName}`}>{saveLabel}</span>
-          <button className="mobile-editor-done" type="button" disabled={saveState === "loading"} onClick={() => void leavePage()}>
-            完成
-          </button>
-        </div>
-      </header>
+      <MobileEditorHeader saveLabel={saveLabel} statusClassName={statusClassName} saveState={saveState} onLeave={() => void leavePage()} />
 
       <main className="mobile-editor-main">
         {error && <div className="mobile-editor-error">{error}</div>}
@@ -601,16 +574,11 @@ const MobileTiptapEditorApp = () => {
           onChange={(event) => handleTitleChange(event.target.value)}
         />
         <div className="mobile-editor-meta-row">
-          <button
-            className="mobile-editor-notebook-button"
-            type="button"
-            aria-label="所在笔记本"
+          <MobileEditorNotebookButton
+            label={currentNotebookLabel}
             disabled={!memo || notebookUpdatePending || saveState === "loading" || notebookOptions.length === 0}
-            onClick={() => setNotebookSheetOpen(true)}
-          >
-            <span>{currentNotebookLabel}</span>
-            <ChevronDown aria-hidden="true" size={14} strokeWidth={2.2} />
-          </button>
+            onOpen={() => setNotebookSheetOpen(true)}
+          />
           <input
             className="mobile-editor-tags"
             value={tagsText}
@@ -622,66 +590,17 @@ const MobileTiptapEditorApp = () => {
           />
         </div>
 
-        <div className="mobile-editor-tool-row">
-          <button
-            className="mobile-editor-tool-button"
-            type="button"
-            aria-label="上传图片"
-            title="上传图片"
-            disabled={editorActionDisabled}
-            onPointerDown={(event) => event.preventDefault()}
-            onClick={() => imageInputRef.current?.click()}
-          >
-            <ImagePlus aria-hidden="true" size={18} strokeWidth={2} />
-          </button>
-          <button
-            className="mobile-editor-tool-button"
-            type="button"
-            aria-label="加粗"
-            title="加粗"
-            aria-pressed={Boolean(editor?.isActive("bold"))}
-            disabled={editorActionDisabled}
-            onPointerDown={(event) => event.preventDefault()}
-            onClick={() => runEditorCommand(() => editor?.chain().focus().toggleBold().run() ?? false)}
-          >
-            <Bold aria-hidden="true" size={17} strokeWidth={2.4} />
-          </button>
-          <button
-            className="mobile-editor-tool-button"
-            type="button"
-            aria-label="无序列表"
-            title="无序列表"
-            aria-pressed={Boolean(editor?.isActive("bulletList"))}
-            disabled={editorActionDisabled}
-            onPointerDown={(event) => event.preventDefault()}
-            onClick={() => runEditorCommand(() => editor?.chain().focus().toggleBulletList().run() ?? false)}
-          >
-            <List aria-hidden="true" size={18} strokeWidth={2.2} />
-          </button>
-          <button
-            className="mobile-editor-tool-button"
-            type="button"
-            aria-label="引用"
-            title="引用"
-            aria-pressed={Boolean(editor?.isActive("blockquote"))}
-            disabled={editorActionDisabled}
-            onPointerDown={(event) => event.preventDefault()}
-            onClick={() => runEditorCommand(() => editor?.chain().focus().toggleBlockquote().run() ?? false)}
-          >
-            <Quote aria-hidden="true" size={17} strokeWidth={2.2} />
-          </button>
-          <button
-            className="mobile-editor-tool-button"
-            type="button"
-            aria-label="分割线"
-            title="分割线"
-            disabled={editorActionDisabled}
-            onPointerDown={(event) => event.preventDefault()}
-            onClick={() => runEditorCommand(() => editor?.chain().focus().setHorizontalRule().run() ?? false)}
-          >
-            <Minus aria-hidden="true" size={18} strokeWidth={2.4} />
-          </button>
-        </div>
+        <MobileEditorToolbar
+          disabled={editorActionDisabled}
+          boldActive={Boolean(editor?.isActive("bold"))}
+          bulletListActive={Boolean(editor?.isActive("bulletList"))}
+          blockquoteActive={Boolean(editor?.isActive("blockquote"))}
+          onPickImage={() => imageInputRef.current?.click()}
+          onToggleBold={() => runEditorCommand(() => editor?.chain().focus().toggleBold().run() ?? false)}
+          onToggleBulletList={() => runEditorCommand(() => editor?.chain().focus().toggleBulletList().run() ?? false)}
+          onToggleBlockquote={() => runEditorCommand(() => editor?.chain().focus().toggleBlockquote().run() ?? false)}
+          onSetHorizontalRule={() => runEditorCommand(() => editor?.chain().focus().setHorizontalRule().run() ?? false)}
+        />
         <input
           ref={imageInputRef}
           type="file"
@@ -695,55 +614,20 @@ const MobileTiptapEditorApp = () => {
         />
 
         {notebookSheetOpen && (
-          <div className="mobile-editor-sheet-backdrop" role="presentation" onClick={() => setNotebookSheetOpen(false)}>
-            <section
-              className="mobile-editor-notebook-sheet"
-              role="dialog"
-              aria-modal="true"
-              aria-label="选择笔记本"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div className="mobile-editor-notebook-sheet-handle" aria-hidden="true" />
-              <div className="mobile-editor-notebook-sheet-header">
-                <h2>所在笔记本</h2>
-                <button type="button" onClick={() => setNotebookSheetOpen(false)}>
-                  关闭
-                </button>
-              </div>
-              <div className="mobile-editor-notebook-list">
-                {notebookOptions.map((notebook) => {
-                  const selected = notebook.id === memo?.notebookId;
-
-                  return (
-                    <button
-                      key={notebook.id}
-                      className="mobile-editor-notebook-option"
-                      type="button"
-                      aria-current={selected ? "page" : undefined}
-                      disabled={notebookUpdatePending}
-                      style={{ paddingLeft: `${16 + notebook.depth * 18}px` }}
-                      onClick={() => void handleNotebookChange(notebook.id)}
-                    >
-                      <span>{notebook.name}</span>
-                      {selected && <Check aria-hidden="true" size={16} strokeWidth={2.4} />}
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-          </div>
+          <MobileEditorNotebookSheet
+            options={notebookOptions}
+            selectedNotebookId={memo?.notebookId}
+            updating={notebookUpdatePending}
+            onClose={() => setNotebookSheetOpen(false)}
+            onSelect={(notebookId) => void handleNotebookChange(notebookId)}
+          />
         )}
 
         <div className="edgeever-mobile-tiptap-editor">
           <EditorContent editor={editor} />
         </div>
 
-        {saveState === "error" && fallbackMarkdown && (
-          <details className="mobile-editor-fallback">
-            <summary>查看当前正文 Markdown 备份</summary>
-            <pre>{fallbackMarkdown}</pre>
-          </details>
-        )}
+        {saveState === "error" && fallbackMarkdown && <MobileEditorFallback markdown={fallbackMarkdown} />}
       </main>
     </div>
   );

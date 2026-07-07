@@ -33,6 +33,34 @@ export type MobileEditorSaveState =
   | "local-draft"
   | "leaving";
 
+export const getMobileEditorSaveLabel = (saveState: MobileEditorSaveState) =>
+  saveState === "loading"
+    ? "加载中"
+    : saveState === "saving"
+      ? "保存中"
+      : saveState === "compressing"
+        ? "压缩中"
+        : saveState === "uploading"
+          ? "上传中"
+          : saveState === "dirty"
+            ? "未保存"
+            : saveState === "saved"
+              ? "已保存"
+              : saveState === "local-draft"
+                ? "本地草稿"
+                : saveState === "leaving"
+                  ? "返回中"
+                  : saveState === "error"
+                    ? "保存失败"
+                    : "已保存";
+
+export const getMobileEditorStatusClassName = (saveState: MobileEditorSaveState) =>
+  saveState === "error"
+    ? "error"
+    : saveState === "dirty" || saveState === "saving" || saveState === "compressing" || saveState === "uploading" || saveState === "leaving"
+      ? "active"
+      : "";
+
 export const getMobileEditorParams = () =>
   new URLSearchParams(window.location.hash ? window.location.hash.slice(1) : window.location.search);
 
