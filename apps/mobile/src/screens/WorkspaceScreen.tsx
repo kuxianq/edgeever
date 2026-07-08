@@ -39,6 +39,7 @@ import {
   Image as RNImage,
   Linking,
   Modal,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -53,6 +54,7 @@ import { useSession } from "../lib/session";
 
 const ALL_NOTES_ID = "all";
 const DEFAULT_MEMO_TITLE = "无标题笔记";
+const MOBILE_APP_VERSION = "0.1.2";
 const MEMO_TEMPLATES: MemoTemplate[] = [
   {
     id: "quick-note",
@@ -128,6 +130,8 @@ export const WorkspaceScreen = () => {
   const [tagsManagerOpen, setTagsManagerOpen] = useState(false);
   const [resourcesOpen, setResourcesOpen] = useState(false);
   const [apiTokensOpen, setApiTokensOpen] = useState(false);
+  const [evernoteGuideOpen, setEvernoteGuideOpen] = useState(false);
+  const [systemInfoOpen, setSystemInfoOpen] = useState(false);
   const [revisionMemo, setRevisionMemo] = useState<MemoDetail | null>(null);
   const [selectedMemoIds, setSelectedMemoIds] = useState<Set<string>>(() => new Set());
   const [selectionMoveOpen, setSelectionMoveOpen] = useState(false);
@@ -487,8 +491,10 @@ export const WorkspaceScreen = () => {
           notebookCount={notebooks.length}
           memoCount={memoCount}
           onOpenApiTokens={() => setApiTokensOpen(true)}
+          onOpenEvernoteGuide={() => setEvernoteGuideOpen(true)}
           onOpenNotebookManager={() => setNotebookManagerOpen(true)}
           onOpenResources={() => setResourcesOpen(true)}
+          onOpenSystemInfo={() => setSystemInfoOpen(true)}
           onOpenTagsManager={() => setTagsManagerOpen(true)}
           onOpenTemplates={() => setTemplatesOpen(true)}
         />
@@ -525,6 +531,8 @@ export const WorkspaceScreen = () => {
       <TagsManagerModal onClose={() => setTagsManagerOpen(false)} visible={tagsManagerOpen} />
       <ResourcesModal activeMemo={selectedMemo} onClose={() => setResourcesOpen(false)} visible={resourcesOpen} />
       <ApiTokensModal baseUrl={session?.baseUrl ?? ""} onClose={() => setApiTokensOpen(false)} visible={apiTokensOpen} />
+      <EvernoteGuideModal onClose={() => setEvernoteGuideOpen(false)} visible={evernoteGuideOpen} />
+      <SystemInfoModal baseUrl={session?.baseUrl ?? ""} memoCount={memoCount} notebookCount={notebooks.length} onClose={() => setSystemInfoOpen(false)} visible={systemInfoOpen} />
       <RevisionHistoryModal
         memo={revisionMemo}
         onClose={() => setRevisionMemo(null)}
@@ -847,16 +855,20 @@ const SettingsView = ({
   memoCount,
   notebookCount,
   onOpenApiTokens,
+  onOpenEvernoteGuide,
   onOpenNotebookManager,
   onOpenResources,
+  onOpenSystemInfo,
   onOpenTagsManager,
   onOpenTemplates,
 }: {
   memoCount: number;
   notebookCount: number;
   onOpenApiTokens: () => void;
+  onOpenEvernoteGuide: () => void;
   onOpenNotebookManager: () => void;
   onOpenResources: () => void;
+  onOpenSystemInfo: () => void;
   onOpenTagsManager: () => void;
   onOpenTemplates: () => void;
 }) => (
@@ -876,6 +888,12 @@ const SettingsView = ({
     </Pressable>
     <Pressable onPress={onOpenApiTokens}>
       <PanelRow label="MCP 与 API Token" value="创建、复制、撤销 Token" />
+    </Pressable>
+    <Pressable onPress={onOpenEvernoteGuide}>
+      <PanelRow label="Evernote 导入指引" value="MCP 迁移流程与 Prompt" />
+    </Pressable>
+    <Pressable onPress={onOpenSystemInfo}>
+      <PanelRow label="系统信息" value="版本、平台、实例、统计" />
     </Pressable>
     <PanelRow label="移动端形态" value="React Native" />
     <PanelRow label="笔记本数量" value={String(notebookCount)} />
@@ -1639,6 +1657,119 @@ const ApiTokenRow = ({
         </IconButton>
       </View>
     </View>
+  );
+};
+
+const EvernoteGuideModal = ({ onClose, visible }: { onClose: () => void; visible: boolean }) => (
+  <Modal animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet" visible={visible}>
+    <SafeAreaView style={styles.modalSafeArea}>
+      <View style={styles.modalHeader}>
+        <IconButton onPress={onClose}>
+          <X color="#0f172a" size={20} />
+        </IconButton>
+        <Text style={styles.modalTitle}>Evernote 导入指引</Text>
+        <View style={styles.iconButtonPlaceholder} />
+      </View>
+
+      <ScrollView contentContainerStyle={styles.editorForm}>
+        <View style={styles.guideHero}>
+          <Upload color="#047857" size={24} />
+          <Text style={styles.panelValue}>推荐通过 AI 编程助手 + EdgeEver MCP 自动迁移</Text>
+          <Text style={styles.panelLabel}>该流程用于从 Evernote/印象笔记导出 ENEX，并通过 MCP 批量导入 EdgeEver。</Text>
+        </View>
+
+        <GuideStep
+          title="1. 创建 EdgeEver MCP Token"
+          body="在设置页打开“MCP 与 API Token”，创建包含笔记本、笔记、资源、标签读写权限的 Token，并复制完整 MCP 配置。"
+        />
+        <GuideStep
+          title="2. 配置到 AI 编程助手"
+          body="把 MCP 配置发送给 Claude Code、Cursor、Cline 等工具，让它写入当前客户端的 MCP 配置文件。"
+        />
+        <GuideStep
+          title="3. 让助手执行迁移"
+          body="要求助手安装 evernote-backup，同步 Evernote 数据，下载 EdgeEver 的 import-evernote-enex-via-mcp.mjs 脚本，并运行导入。"
+        />
+        <GuideStep
+          title="4. 回到 EdgeEver 验证"
+          body="导入完成后刷新客户端，检查笔记本层级、笔记内容、图片资源是否正常。"
+        />
+
+        <View style={styles.revisionPreviewBlock}>
+          <Text style={styles.label}>可直接复制给 AI 助手的 Prompt</Text>
+          <Text selectable style={styles.revisionPreviewText}>
+            你是 AI 编程助手。请帮我把本地的印象笔记全量迁移到我当前部署的 EdgeEver 实例中：{"\n"}
+            1. 检查并使用 `pipx install evernote-backup` 自动安装备份工具。{"\n"}
+            2. 提示我输入印象笔记的用户名和密码并初始化数据库，随后同步数据并导出到 `./evernote-export`。{"\n"}
+            3. 从 GitHub 下载最新版迁移脚本 `scripts/import-evernote-enex-via-mcp.mjs`。{"\n"}
+            4. 安装 `sharp` 和 `fast-xml-parser`。{"\n"}
+            5. 使用已配置的 MCP URL 和 Token 运行脚本完成迁移。
+          </Text>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  </Modal>
+);
+
+const GuideStep = ({ body, title }: { body: string; title: string }) => (
+  <View style={styles.guideStep}>
+    <Text style={styles.panelValue}>{title}</Text>
+    <Text style={styles.panelLabel}>{body}</Text>
+  </View>
+);
+
+const SystemInfoModal = ({
+  baseUrl,
+  memoCount,
+  notebookCount,
+  onClose,
+  visible,
+}: {
+  baseUrl: string;
+  memoCount: number;
+  notebookCount: number;
+  onClose: () => void;
+  visible: boolean;
+}) => {
+  const [copied, setCopied] = useState(false);
+  const infoItems = [
+    { label: "版本", value: `v${MOBILE_APP_VERSION}` },
+    { label: "平台", value: Platform.OS },
+    { label: "平台版本", value: String(Platform.Version) },
+    { label: "实例地址", value: baseUrl || "未连接" },
+    { label: "笔记本数量", value: String(notebookCount) },
+    { label: "笔记总数", value: String(memoCount) },
+    { label: "时区", value: Intl.DateTimeFormat().resolvedOptions().timeZone || "未知" },
+    { label: "语言", value: Intl.DateTimeFormat().resolvedOptions().locale || "未知" },
+  ];
+
+  const copySystemInfo = async () => {
+    await Clipboard.setStringAsync(infoItems.map((item) => `${item.label}: ${item.value}`).join("\n"));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1600);
+  };
+
+  return (
+    <Modal animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet" visible={visible}>
+      <SafeAreaView style={styles.modalSafeArea}>
+        <View style={styles.modalHeader}>
+          <IconButton onPress={onClose}>
+            <X color="#0f172a" size={20} />
+          </IconButton>
+          <Text style={styles.modalTitle}>系统信息</Text>
+          <IconButton onPress={copySystemInfo}>
+            {copied ? <ShieldCheck color="#047857" size={18} /> : <Copy color="#0f172a" size={18} />}
+          </IconButton>
+        </View>
+
+        <ScrollView contentContainerStyle={styles.editorForm}>
+          <Text style={styles.sectionSubtitle}>用于排查客户端、实例连接和多端环境问题。</Text>
+          {infoItems.map((item) => (
+            <PanelRow key={item.label} label={item.label} value={item.value} />
+          ))}
+        </ScrollView>
+      </SafeAreaView>
+    </Modal>
   );
 };
 
@@ -3323,6 +3454,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 8,
     padding: 22,
+  },
+  guideHero: {
+    backgroundColor: "#ecfdf5",
+    borderColor: "#a7f3d0",
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 8,
+    padding: 14,
+  },
+  guideStep: {
+    backgroundColor: "#ffffff",
+    borderColor: "#e2e8f0",
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 6,
+    padding: 14,
   },
   templateCard: {
     alignItems: "center",
