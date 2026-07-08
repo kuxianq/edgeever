@@ -27,7 +27,7 @@ import {
 import { MemoListPane, MemoSelectionActionBar } from "./MemoListPane";
 import { AppConfirmDialog, MemoDeleteConfirmDialog, NotebookNameDialog } from "./dialogs/ConfirmDialogs";
 import { api } from "@/lib/api";
-import { MOBILE_EDITOR_RETURN_PARAM, openStandaloneMobileEditor } from "@/lib/mobile-editor";
+import { MOBILE_EDITOR_RETURN_PARAM } from "@/lib/mobile-editor";
 import { cn } from "@/lib/utils";
 import { createExcerpt, docToText, type Notebook, type AuthUser, type MemoSummary, type MemoDetail } from "@edgeever/shared";
 import type {
@@ -1296,9 +1296,6 @@ export const WorkspaceApp = ({
       setSelectedMemoId(data.memo.id);
       setActivePane("editor");
 
-      if (!isDesktopViewport()) {
-        openStandaloneMobileEditor(data.memo.id);
-      }
     },
   });
 

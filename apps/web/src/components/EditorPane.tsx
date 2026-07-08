@@ -50,7 +50,6 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { EditorToolbar } from "./EditorToolbar";
 import { RevisionHistoryDialog } from "./dialogs/RevisionHistoryDialog";
 import { api } from "@/lib/api";
-import { consumeStandaloneMobileEditorReturn, openStandaloneMobileEditor } from "@/lib/mobile-editor";
 import { cn, formatDateTime, parseTagsText } from "@/lib/utils";
 import { docToMarkdown, markdownToDoc, type Notebook, type MemoDetail, type TiptapDoc } from "@edgeever/shared";
 import { compressImageForUpload } from "@/lib/image-compression";
@@ -931,96 +930,7 @@ const MobileNativeEditorPane = ({
 };
 
 export const EditorPane = (props: EditorPaneProps) => {
-  const [isMobileViewport, setIsMobileViewport] = useState(() =>
-    typeof window === "undefined" ? false : window.matchMedia(MOBILE_EDITOR_QUERY).matches
-  );
-  const [mobileNativeEditMemoId, setMobileNativeEditMemoId] = useState<string | null>(null);
-  const standaloneOpenMemoIdRef = useRef<string | null>(null);
-  const readOnly = props.isTrashView || Boolean(props.memo?.isDeleted);
-  const mobileDefaultEditRequested = Boolean(
-    props.memo?.id && props.memo.id === props.mobileDefaultEditMemoId && !readOnly
-  );
-  const mobileNativeEditingActive = Boolean(
-    isMobileViewport &&
-      props.memo &&
-      !readOnly &&
-      (mobileDefaultEditRequested || mobileNativeEditMemoId === props.memo.id)
-  );
-
-  useEffect(() => {
-    if (isMobileViewport && mobileDefaultEditRequested && props.memo?.id) {
-      if (consumeStandaloneMobileEditorReturn(props.memo.id)) {
-        props.onMobileDefaultEditConsumed();
-        setMobileNativeEditMemoId(null);
-        props.onBackToList();
-        return;
-      }
-
-      if (standaloneOpenMemoIdRef.current === props.memo.id) {
-        return;
-      }
-
-      standaloneOpenMemoIdRef.current = props.memo.id;
-      props.onMobileDefaultEditConsumed();
-      openStandaloneMobileEditor(props.memo.id);
-    }
-  }, [isMobileViewport, mobileDefaultEditRequested, props.memo?.id, props.onBackToList, props.onMobileDefaultEditConsumed]);
-
-  useEffect(() => {
-    const clearReturnedStandaloneEditor = () => {
-      if (!consumeStandaloneMobileEditorReturn(props.memo?.id ?? null)) {
-        return;
-      }
-
-      props.onMobileDefaultEditConsumed();
-      setMobileNativeEditMemoId(null);
-      props.onBackToList();
-    };
-
-    clearReturnedStandaloneEditor();
-    window.addEventListener("pageshow", clearReturnedStandaloneEditor);
-    document.addEventListener("visibilitychange", clearReturnedStandaloneEditor);
-
-    return () => {
-      window.removeEventListener("pageshow", clearReturnedStandaloneEditor);
-      document.removeEventListener("visibilitychange", clearReturnedStandaloneEditor);
-    };
-  }, [props.memo?.id, props.onBackToList, props.onMobileDefaultEditConsumed]);
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia(MOBILE_EDITOR_QUERY);
-    const updateMobileViewport = () => setIsMobileViewport(mediaQuery.matches);
-
-    updateMobileViewport();
-    mediaQuery.addEventListener("change", updateMobileViewport);
-
-    return () => mediaQuery.removeEventListener("change", updateMobileViewport);
-  }, []);
-
-  useEffect(() => {
-    setMobileNativeEditMemoId(null);
-  }, [props.memo?.id]);
-
-  if (mobileNativeEditingActive) {
-    return (
-      <div className="flex h-full min-h-0 items-center justify-center bg-white text-sm font-medium text-slate-400">
-        打开编辑器
-      </div>
-    );
-  }
-
-  return (
-    <RichEditorPane
-      {...props}
-      mobileDefaultEditMemoId={null}
-      onRequestMobileNativeEdit={() => {
-        if (props.memo?.id && !readOnly) {
-          setMobileNativeEditMemoId(props.memo.id);
-          openStandaloneMobileEditor(props.memo.id);
-        }
-      }}
-    />
-  );
+  return <RichEditorPane {...props} />;
 };
 
 const RichEditorPane = ({
