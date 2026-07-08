@@ -19,12 +19,14 @@ import {
   History,
   Home,
   Image as ImageIcon,
+  ImagePlus,
   Italic,
   KeyRound,
   Link,
   List,
   LogOut,
   Merge,
+  Minus,
   Pencil,
   Pin,
   Plus,
@@ -138,7 +140,7 @@ type TextSelection = {
   start: number;
   end: number;
 };
-type MarkdownAction = "heading" | "bold" | "italic" | "bullet" | "checklist" | "quote" | "code" | "link";
+type MarkdownAction = "heading" | "bold" | "italic" | "bullet" | "checklist" | "quote" | "code" | "link" | "horizontalRule";
 
 export const WorkspaceScreen = () => {
   const { client, session, signOut } = useSession();
@@ -2490,6 +2492,7 @@ const EditMemoModal = ({
     }
   >;
 }) => {
+  const { client } = useSession();
   const [title, setTitle] = useState("");
   const [contentMarkdown, setContentMarkdown] = useState("");
   const [contentSelection, setContentSelection] = useState<TextSelection>({ start: 0, end: 0 });
@@ -2560,6 +2563,57 @@ const EditMemoModal = ({
     return () => clearTimeout(timeout);
   }, [contentMarkdown, draftLoaded, memo, notebookId, tagsText, title]);
 
+  const uploadResourceMutation = useMutation({
+    mutationFn: async () => {
+      if (!client || !memo) {
+        throw new Error("请先打开一条可用笔记");
+      }
+
+      if (memo.isDeleted) {
+        throw new Error("回收站中的笔记不能上传图片");
+      }
+
+      const result = await DocumentPicker.getDocumentAsync({
+        copyToCacheDirectory: true,
+        multiple: false,
+        type: "image/*",
+      });
+
+      if (result.canceled) {
+        return null;
+      }
+
+      const asset = result.assets[0];
+
+      if (!asset?.uri) {
+        throw new Error("没有选择图片");
+      }
+
+      const form = new FormData();
+      form.append("file", {
+        uri: asset.uri,
+        name: asset.name || "image",
+        type: asset.mimeType || "application/octet-stream",
+      } as unknown as Blob);
+
+      const { resource } = await client.uploadMemoResource(memo.id, form);
+      return {
+        filename: resource.filename || asset.name || "image",
+        kind: resource.kind,
+        url: resource.url,
+      };
+    },
+    onSuccess: (resource) => {
+      if (!resource) {
+        return;
+      }
+
+      const next = insertResourceMarkdown(contentMarkdown, contentSelection, resource);
+      setContentMarkdown(next.value);
+      setContentSelection(next.selection);
+    },
+  });
+
   const handleSave = () => {
     if (!memo || updateMutation.isPending) {
       return;
@@ -2595,6 +2649,7 @@ const EditMemoModal = ({
           });
           await clearMobileMemoDraft(memo.id);
           await onQueued();
+          updateMutation.reset();
           Alert.alert("已保存到本地队列", "网络恢复后可在设置页手动同步。");
         },
       }
@@ -2636,11 +2691,13 @@ const EditMemoModal = ({
 
           <Text style={styles.label}>正文</Text>
           <MarkdownToolbar
+            isUploading={uploadResourceMutation.isPending}
             onAction={(action) => {
               const next = applyMarkdownAction(contentMarkdown, contentSelection, action);
               setContentMarkdown(next.value);
               setContentSelection(next.selection);
             }}
+            onUploadImage={() => uploadResourceMutation.mutate()}
           />
           <TextInput
             multiline
@@ -2656,6 +2713,9 @@ const EditMemoModal = ({
 
           {updateMutation.error ? (
             <Text style={styles.errorText}>{updateMutation.error instanceof Error ? updateMutation.error.message : "保存失败"}</Text>
+          ) : null}
+          {uploadResourceMutation.error ? (
+            <Text style={styles.errorText}>{uploadResourceMutation.error instanceof Error ? uploadResourceMutation.error.message : "上传失败"}</Text>
           ) : null}
         </ScrollView>
       </SafeAreaView>
@@ -3007,21 +3067,43 @@ const BottomNavItem = ({ active = false, icon, label, onPress }: { active?: bool
   </Pressable>
 );
 
-const MarkdownToolbar = ({ onAction }: { onAction: (action: MarkdownAction) => void }) => (
+const MarkdownToolbar = ({
+  isUploading = false,
+  onAction,
+  onUploadImage,
+}: {
+  isUploading?: boolean;
+  onAction: (action: MarkdownAction) => void;
+  onUploadImage?: () => void;
+}) => (
   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.markdownToolbar}>
+    {onUploadImage ? (
+      <MarkdownToolbarButton disabled={isUploading} icon={<ImagePlus color="#334155" size={15} />} label={isUploading ? "上传中" : "图片"} onPress={onUploadImage} />
+    ) : null}
     <MarkdownToolbarButton icon={<Heading2 color="#334155" size={15} />} label="标题" onPress={() => onAction("heading")} />
     <MarkdownToolbarButton icon={<Bold color="#334155" size={15} />} label="加粗" onPress={() => onAction("bold")} />
     <MarkdownToolbarButton icon={<Italic color="#334155" size={15} />} label="斜体" onPress={() => onAction("italic")} />
     <MarkdownToolbarButton icon={<List color="#334155" size={15} />} label="列表" onPress={() => onAction("bullet")} />
     <MarkdownToolbarButton icon={<CheckSquare color="#334155" size={15} />} label="待办" onPress={() => onAction("checklist")} />
     <MarkdownToolbarButton icon={<Quote color="#334155" size={15} />} label="引用" onPress={() => onAction("quote")} />
+    <MarkdownToolbarButton icon={<Minus color="#334155" size={15} />} label="分割线" onPress={() => onAction("horizontalRule")} />
     <MarkdownToolbarButton icon={<Code color="#334155" size={15} />} label="代码" onPress={() => onAction("code")} />
     <MarkdownToolbarButton icon={<Link color="#334155" size={15} />} label="链接" onPress={() => onAction("link")} />
   </ScrollView>
 );
 
-const MarkdownToolbarButton = ({ icon, label, onPress }: { icon: ReactNode; label: string; onPress: () => void }) => (
-  <Pressable onPress={onPress} style={styles.markdownToolButton}>
+const MarkdownToolbarButton = ({
+  disabled = false,
+  icon,
+  label,
+  onPress,
+}: {
+  disabled?: boolean;
+  icon: ReactNode;
+  label: string;
+  onPress: () => void;
+}) => (
+  <Pressable disabled={disabled} onPress={onPress} style={[styles.markdownToolButton, disabled && styles.buttonDisabled]}>
     {icon}
     <Text style={styles.markdownToolText}>{label}</Text>
   </Pressable>
@@ -3056,6 +3138,19 @@ const applyMarkdownAction = (value: string, selection: TextSelection, action: Ma
 
   if (action === "quote") {
     return prefixSelectedLines(value, start, end, "> ");
+  }
+
+  if (action === "horizontalRule") {
+    const separator = value.slice(0, start).endsWith("\n") ? "" : "\n";
+    const trailing = value.slice(end).startsWith("\n") ? "" : "\n";
+    const replacement = `${separator}---${trailing}`;
+    const nextValue = replaceRange(value, start, end, replacement);
+    const nextPosition = start + replacement.length;
+
+    return {
+      value: nextValue,
+      selection: { start: nextPosition, end: nextPosition },
+    };
   }
 
   if (action === "bold") {
@@ -3104,6 +3199,30 @@ const prefixSelectedLines = (value: string, start: number, end: number, prefix: 
   return {
     value: nextValue,
     selection: { start: lineStart, end: lineStart + replacement.length },
+  };
+};
+
+const insertResourceMarkdown = (
+  value: string,
+  selection: TextSelection,
+  resource: {
+    filename: string;
+    kind: "image" | "attachment";
+    url: string;
+  }
+) => {
+  const start = Math.max(0, Math.min(selection.start, value.length));
+  const end = Math.max(start, Math.min(selection.end, value.length));
+  const markdown = appendResourceMarkdown("", resource).trim();
+  const separatorBefore = start > 0 && !value.slice(0, start).endsWith("\n") ? "\n\n" : "";
+  const separatorAfter = end < value.length && !value.slice(end).startsWith("\n") ? "\n\n" : "\n";
+  const replacement = `${separatorBefore}${markdown}${separatorAfter}`;
+  const nextValue = replaceRange(value, start, end, replacement);
+  const nextPosition = start + replacement.length;
+
+  return {
+    value: nextValue,
+    selection: { start: nextPosition, end: nextPosition },
   };
 };
 
