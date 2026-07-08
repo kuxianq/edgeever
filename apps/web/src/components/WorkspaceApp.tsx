@@ -27,7 +27,7 @@ import {
 import { MemoListPane, MemoSelectionActionBar } from "./MemoListPane";
 import { AppConfirmDialog, MemoDeleteConfirmDialog, NotebookNameDialog } from "./dialogs/ConfirmDialogs";
 import { api } from "@/lib/api";
-import { openStandaloneMobileEditor } from "@/lib/mobile-editor";
+import { MOBILE_EDITOR_RETURN_PARAM, openStandaloneMobileEditor } from "@/lib/mobile-editor";
 import { cn } from "@/lib/utils";
 import { createExcerpt, docToText, type Notebook, type AuthUser, type MemoSummary, type MemoDetail } from "@edgeever/shared";
 import type {
@@ -108,6 +108,7 @@ const TagsDialog = lazy(() => import("./dialogs/TagsDialog").then((module) => ({
 const TemplatesDialog = lazy(() => import("./dialogs/TemplatesDialog").then((module) => ({ default: module.TemplatesDialog })));
 
 const SETTINGS_PATH = "/settings";
+const getMobileEditorReturnMemoId = (search: string) => new URLSearchParams(search).get(MOBILE_EDITOR_RETURN_PARAM);
 const emptySyncQueueSummary = (): SyncQueueSummary => ({
   total: 0,
   pending: 0,
@@ -737,7 +738,8 @@ export const WorkspaceApp = ({
   const location = useLocation();
   const navigate = useNavigate();
   const isInitialSettingsRoute = location.pathname === SETTINGS_PATH;
-  const [activePane, setActivePane] = useState<Pane>(() => (isInitialSettingsRoute ? "editor" : "memos"));
+  const isInitialMobileEditorReturn = Boolean(getMobileEditorReturnMemoId(location.search));
+  const [activePane, setActivePane] = useState<Pane>(() => (isInitialSettingsRoute && !isInitialMobileEditorReturn ? "editor" : "memos"));
   const [memoView, setMemoView] = useState<MemoView>("notebook");
   const [selectedNotebookId, setSelectedNotebookId] = useState<string | null>(null);
   const [selectedMemoId, setSelectedMemoId] = useState<string | null>(null);
@@ -760,7 +762,7 @@ export const WorkspaceApp = ({
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [mobileNotebookPickerOpen, setMobileNotebookPickerOpen] = useState(false);
   const [mobileBottomNavActive, setMobileBottomNavActive] = useState<MobileBottomNavItem>(() =>
-    isInitialSettingsRoute ? "settings" : "home"
+    isInitialSettingsRoute && !isInitialMobileEditorReturn ? "settings" : "home"
   );
   const [mobileSearchFocusToken, setMobileSearchFocusToken] = useState(0);
   const [noteSearchFocusToken, setNoteSearchFocusToken] = useState(0);
@@ -896,6 +898,25 @@ export const WorkspaceApp = ({
   }, []);
 
   const clearPendingCreatedMemo = useCallback(() => {}, []);
+
+  useEffect(() => {
+    const returnedMemoId = getMobileEditorReturnMemoId(location.search);
+    if (!returnedMemoId) {
+      return;
+    }
+
+    skipNextHomeRouteSyncRef.current = false;
+    setRightView("editor");
+    setMobileBottomNavActive("home");
+    setActivePane("memos");
+    setSelectedMemoId(null);
+    setCreatedMemoEditId(null);
+    clearMemoSelection();
+
+    if (location.pathname !== "/" || location.search) {
+      navigate("/", { replace: true });
+    }
+  }, [clearMemoSelection, location.pathname, location.search, navigate]);
 
   const replaceMemoSelection = useCallback((memoIds: string[]) => {
     setSelectedMemoIds(new Set(memoIds));

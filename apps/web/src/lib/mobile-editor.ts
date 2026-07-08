@@ -1,8 +1,17 @@
 export const STANDALONE_MOBILE_EDITOR_PATH = "/mobile-edit.html";
+export const MOBILE_EDITOR_RETURN_PARAM = "mobileEditorReturn";
 const STANDALONE_MOBILE_EDITOR_MEMO_KEY = "edgeever-standalone-mobile-editor-memo-id";
 const STANDALONE_MOBILE_EDITOR_RETURN_KEY = "edgeever-standalone-mobile-editor-return-memo-id";
 
-export const getStandaloneMobileEditorHref = (memoId: string, returnTo = "/") => {
+export const getStandaloneMobileEditorReturnPath = (memoId: string) => {
+  const params = new URLSearchParams({
+    [MOBILE_EDITOR_RETURN_PARAM]: memoId,
+  });
+
+  return `/?${params.toString()}`;
+};
+
+export const getStandaloneMobileEditorHref = (memoId: string, returnTo = getStandaloneMobileEditorReturnPath(memoId)) => {
   const params = new URLSearchParams({
     memoId,
     returnTo,
@@ -10,7 +19,7 @@ export const getStandaloneMobileEditorHref = (memoId: string, returnTo = "/") =>
   return `${STANDALONE_MOBILE_EDITOR_PATH}#${params.toString()}`;
 };
 
-export const openStandaloneMobileEditor = (memoId: string, returnTo = "/") => {
+export const openStandaloneMobileEditor = (memoId: string, returnTo = getStandaloneMobileEditorReturnPath(memoId)) => {
   markStandaloneMobileEditorOpened(memoId);
   window.location.href = getStandaloneMobileEditorHref(memoId, returnTo);
 };
