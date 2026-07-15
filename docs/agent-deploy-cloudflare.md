@@ -57,9 +57,10 @@ Chinese version:
 
 4. Prepare deployment resources and `.env.local`.
 
-   If the user gave a first login password, run:
+   `EDGE_EVER_PASSWORD` must contain the **plaintext password that the user will type when first logging in to EdgeEver**. It is not an encrypted password or a password hash. If the user gave this first login password, run:
 
    ```sh
+   # Plaintext first-login password; do not put a hash here.
    EDGE_EVER_PASSWORD='<first-login-password>' bun run deploy:setup
    ```
 
@@ -70,7 +71,13 @@ Chinese version:
    - copy `.env.local.example` to `.env.local` when needed
    - reuse or create the D1 database
    - create the R2 buckets when needed
-   - save `EDGE_EVER_PASSWORD` as `EDGE_EVER_AUTH_PASSWORD` in the private `.env.local`
+   - save the plaintext `EDGE_EVER_PASSWORD` as `EDGE_EVER_AUTH_PASSWORD` in the private, git-ignored `.env.local`; deployment uploads it as a Cloudflare Worker Secret, not a regular plaintext build variable
+
+   Password variable meanings:
+
+   - `EDGE_EVER_PASSWORD`: plaintext first-login password passed temporarily to `deploy:setup`
+   - `EDGE_EVER_AUTH_PASSWORD`: the same plaintext login password stored only in private `.env.local` and uploaded as a Cloudflare Worker Secret
+   - `EDGE_EVER_AUTH_PASSWORD_HASH`: a PBKDF2 password hash supported only for legacy or advanced configurations; never pass this hash through `EDGE_EVER_PASSWORD`
 
 5. Check the deployment inputs.
 
