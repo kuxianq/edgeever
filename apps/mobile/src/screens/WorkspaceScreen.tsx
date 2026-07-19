@@ -3032,6 +3032,7 @@ const NotebookManagerModal = ({
 
 const TagsManagerModal = ({ onClose, visible }: { onClose: () => void; visible: boolean }) => {
   const { client } = useSession();
+  const { translate } = useMobileLocale();
   const queryClient = useQueryClient();
   const localePreference = useMobileLocalePreference();
   const [editingTagName, setEditingTagName] = useState<string | null>(null);
@@ -3102,6 +3103,90 @@ const TagsManagerModal = ({ onClose, visible }: { onClose: () => void; visible: 
   };
 
   const tags = tagsQuery.data?.tags ?? [];
+  const renderTagItem = ({ item: tag }: { item: TagSummary }) => {
+    const editing = editingTagName === tag.name;
+    const nextName = editingTagValue.trim();
+    const canRename = Boolean(nextName && nextName !== tag.name && !renameTagMutation.isPending);
+
+    return (
+      <View style={[styles.tagManageRow, editing && styles.tagManageRowEditing]}>
+        {editing ? (
+          <View style={styles.tagRenameForm}>
+            <TextInput
+              accessibilityLabel="标签名称"
+              autoFocus
+              editable={!renameTagMutation.isPending}
+              maxLength={80}
+              onChangeText={setEditingTagValue}
+              onSubmitEditing={() => {
+                if (canRename) {
+                  renameTagMutation.mutate({ tag: tag.name, name: nextName });
+                }
+              }}
+              placeholder="标签名称"
+              placeholderTextColor="#94a3b8"
+              returnKeyType="done"
+              style={styles.tagRenameInput}
+              value={editingTagValue}
+            />
+            <View style={styles.tagRenameActions}>
+              <Pressable
+                accessibilityLabel="保存"
+                accessibilityRole="button"
+                disabled={!canRename}
+                onPress={() => renameTagMutation.mutate({ tag: tag.name, name: nextName })}
+                style={[styles.tagRenameSaveButton, !canRename && styles.buttonDisabled]}
+              >
+                {renameTagMutation.isPending ? <ActivityIndicator color="#ffffff" size="small" /> : <Text style={styles.tagRenameSaveText}>保存</Text>}
+              </Pressable>
+              <Pressable
+                accessibilityLabel="取消"
+                accessibilityRole="button"
+                disabled={renameTagMutation.isPending}
+                onPress={() => {
+                  setEditingTagName(null);
+                  setEditingTagValue("");
+                }}
+                style={[styles.tagRenameCancelButton, renameTagMutation.isPending && styles.buttonDisabled]}
+              >
+                <Text style={styles.tagRenameCancelText}>取消</Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : (
+          <>
+            <View style={styles.tagManageText}>
+              <Text numberOfLines={1} style={styles.tagManageName}>
+                #{tag.name}
+              </Text>
+              <Text style={styles.tagManageMeta}>
+                {translate(`${tag.memoCount} 条笔记`)}{tag.updatedAt ? ` · ${formatDate(tag.updatedAt, localePreference)}` : ""}
+              </Text>
+            </View>
+            <Pressable
+              accessibilityLabel={translate(`重命名标签 ${tag.name}`)}
+              accessibilityRole="button"
+              onPress={() => {
+                setEditingTagName(tag.name);
+                setEditingTagValue(tag.name);
+              }}
+              style={styles.tagManageAction}
+            >
+              <Pencil color="#64748b" size={16} />
+            </Pressable>
+            <Pressable
+              accessibilityLabel={translate(`删除标签 ${tag.name}`)}
+              accessibilityRole="button"
+              onPress={() => requestDeleteTag(tag)}
+              style={[styles.tagManageAction, styles.tagManageActionDanger]}
+            >
+              <Trash2 color="#b91c1c" size={16} />
+            </Pressable>
+          </>
+        )}
+      </View>
+    );
+  };
 
   return (
     <Modal animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet" visible={visible}>
@@ -3130,70 +3215,29 @@ const TagsManagerModal = ({ onClose, visible }: { onClose: () => void; visible: 
             <Text style={styles.mutedText}>在编辑笔记时添加标签后会显示在这里</Text>
           </View>
         ) : (
-          <ScrollView contentContainerStyle={styles.editorForm}>
-            {tags.map((tag) => {
-              const editing = editingTagName === tag.name;
-              const nextName = editingTagValue.trim();
-
-              return (
-                <View key={tag.name} style={styles.tagManageRow}>
-                  {editing ? (
-                    <TextInput
-                      autoFocus
-                      onChangeText={setEditingTagValue}
-                      placeholder="标签名称"
-                      placeholderTextColor="#94a3b8"
-                      style={[styles.titleInput, styles.inlineInput]}
-                      value={editingTagValue}
-                    />
-                  ) : (
-                    <View style={styles.notebookManageText}>
-                      <Text numberOfLines={1} style={styles.panelValue}>
-                        #{tag.name}
-                      </Text>
-                      <Text style={styles.panelLabel}>{tag.memoCount} 条笔记 · {tag.updatedAt ? formatDate(tag.updatedAt, localePreference) : "未更新"}</Text>
-                    </View>
-                  )}
-
-                  {editing ? (
-                    <>
-                      <IconButton onPress={() => renameTagMutation.mutate({ tag: tag.name, name: nextName })}>
-                        {renameTagMutation.isPending ? <ActivityIndicator color="#0f172a" /> : <Check color="#0f172a" size={18} />}
-                      </IconButton>
-                      <IconButton
-                        onPress={() => {
-                          setEditingTagName(null);
-                          setEditingTagValue("");
-                        }}
-                      >
-                        <X color="#0f172a" size={18} />
-                      </IconButton>
-                    </>
-                  ) : (
-                    <>
-                      <IconButton
-                        onPress={() => {
-                          setEditingTagName(tag.name);
-                          setEditingTagValue(tag.name);
-                        }}
-                      >
-                        <Pencil color="#0f172a" size={18} />
-                      </IconButton>
-                      <IconButton onPress={() => requestDeleteTag(tag)}>
-                        <Trash2 color="#b91c1c" size={18} />
-                      </IconButton>
-                    </>
-                  )}
-                </View>
-              );
-            })}
-            {renameTagMutation.error ? (
-              <Text style={styles.errorText}>{renameTagMutation.error instanceof Error ? renameTagMutation.error.message : "重命名失败"}</Text>
-            ) : null}
-            {deleteTagMutation.error ? (
-              <Text style={styles.errorText}>{deleteTagMutation.error instanceof Error ? deleteTagMutation.error.message : "删除失败"}</Text>
-            ) : null}
-          </ScrollView>
+          <FlatList
+            contentContainerStyle={styles.tagManagerListContent}
+            data={tags}
+            initialNumToRender={12}
+            keyboardShouldPersistTaps="handled"
+            keyExtractor={(tag) => tag.name}
+            ListFooterComponent={(
+              <>
+                {renameTagMutation.error ? (
+                  <Text style={styles.errorText}>{renameTagMutation.error instanceof Error ? renameTagMutation.error.message : "重命名失败"}</Text>
+                ) : null}
+                {deleteTagMutation.error ? (
+                  <Text style={styles.errorText}>{deleteTagMutation.error instanceof Error ? deleteTagMutation.error.message : "删除失败"}</Text>
+                ) : null}
+              </>
+            )}
+            maxToRenderPerBatch={10}
+            removeClippedSubviews={Platform.OS === "android"}
+            renderItem={renderTagItem}
+            style={styles.tagManagerList}
+            updateCellsBatchingPeriod={32}
+            windowSize={7}
+          />
         )}
       </SafeAreaView>
     </Modal>
@@ -8781,12 +8825,103 @@ const baseWorkspaceStyles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#ffffff",
     borderColor: "#e2e8f0",
-    borderRadius: 8,
+    borderRadius: 6,
     borderWidth: 1,
     flexDirection: "row",
+    gap: 12,
+    minHeight: 48,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  tagManageRowEditing: {
+    backgroundColor: "#ecfdf5",
+    borderColor: "#a7f3d0",
+  },
+  tagManagerList: {
+    flex: 1,
+  },
+  tagManagerListContent: {
     gap: 8,
-    minHeight: 60,
-    padding: 10,
+    paddingBottom: 32,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  tagManageText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  tagManageName: {
+    color: "#0f172a",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  tagManageMeta: {
+    color: "#64748b",
+    fontSize: 12,
+    marginTop: 4,
+  },
+  tagManageAction: {
+    alignItems: "center",
+    backgroundColor: "transparent",
+    borderRadius: 6,
+    height: 32,
+    justifyContent: "center",
+    width: 32,
+  },
+  tagManageActionDanger: {
+    backgroundColor: "#fef2f2",
+    borderColor: "#fecaca",
+    borderWidth: 1,
+  },
+  tagRenameForm: {
+    flex: 1,
+    gap: 8,
+    minWidth: 0,
+  },
+  tagRenameInput: {
+    backgroundColor: "#ffffff",
+    borderColor: "#e2e8f0",
+    borderRadius: 6,
+    borderWidth: 1,
+    color: "#0f172a",
+    fontSize: 14,
+    height: 36,
+    paddingHorizontal: 10,
+    paddingVertical: 0,
+  },
+  tagRenameActions: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  tagRenameSaveButton: {
+    alignItems: "center",
+    backgroundColor: "#10b981",
+    borderRadius: 6,
+    height: 32,
+    justifyContent: "center",
+    minWidth: 58,
+    paddingHorizontal: 10,
+  },
+  tagRenameSaveText: {
+    color: "#ffffff",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  tagRenameCancelButton: {
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    borderColor: "#e2e8f0",
+    borderRadius: 6,
+    borderWidth: 1,
+    height: 32,
+    justifyContent: "center",
+    minWidth: 58,
+    paddingHorizontal: 10,
+  },
+  tagRenameCancelText: {
+    color: "#334155",
+    fontSize: 12,
+    fontWeight: "600",
   },
   createdTokenPanel: {
     backgroundColor: "#ecfdf5",
