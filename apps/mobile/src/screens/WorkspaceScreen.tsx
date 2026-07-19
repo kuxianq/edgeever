@@ -116,6 +116,7 @@ import {
 import { AccountSecurityPanel } from "./AccountSecurityModal";
 import { beginEditorStartup, markStartup, recordEditorStartup } from "../lib/startup-performance";
 import EditorRuntimePrewarm from "../components/EditorRuntimePrewarm";
+import { showEdgeEverKeyboard } from "../../modules/edgeever-keyboard";
 import LocalTiptapEditor, { type LocalTiptapEditorRef } from "../components/LocalTiptapEditor";
 import { resolveMobileThemeStyles, useMobileTheme, type MobileResolvedTheme } from "../lib/mobile-theme";
 
@@ -2249,6 +2250,7 @@ const CreateMemoModal = ({
 
   const editorElement = useMemo(() => draftLoaded && baseUrl ? (
     <LocalTiptapEditor
+      autoFocus
       baseUrl={baseUrl}
       content={contentJsonRef.current}
       dom={{
@@ -2272,6 +2274,9 @@ const CreateMemoModal = ({
       onReady={async (elapsedMs) => {
         setEditorReady(true);
         recordEditorStartup(elapsedMs);
+        if (Platform.OS === "android") {
+          setTimeout(showEdgeEverKeyboard, 180);
+        }
       }}
       ref={editorRef}
       locale={resolvedLocale}
